@@ -67,6 +67,5 @@ def update_post(session: requests.Session, settings: Settings, id: int, content:
     base_url = f'{settings.wordpress_address}/wp-json/wp/v2/posts/{id}'
     body = {'content': content}
     response = session.post(base_url, data=body)
-    logger.info(response.status_code)
     if not response.ok:
         raise Exception(f'Ответ сервера был: {response.status_code}')

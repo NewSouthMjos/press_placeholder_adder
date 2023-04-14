@@ -41,12 +41,14 @@ def process_multiply_posts(session: requests.Session, settings: Settings):
         f"Загружаю посты, начиная с {settings.start_time} и заканчивая {settings.finish_time}..."
     )
     posts_json = api.get_posts(session, settings)
-    logger.info(f"Загружено постов: {len(posts_json)}")
-    logger.info(f"Начинаю обрабатывать посты")
-    for post_json in posts_json:
+    all_posts_len = len(posts_json)
+    logger.info(f"Загружено постов: {all_posts_len}")
+    logger.info("Начинаю обрабатывать посты")
+    for i, post_json in enumerate(posts_json, start=1):
         process_single_post(
             session, settings, placeholder_handler, log_handler, post_json
         )
+        logger.info(f"Обработано: {i}/{all_posts_len}")
 
 
 def process_single_post(
