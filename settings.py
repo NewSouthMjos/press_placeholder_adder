@@ -1,5 +1,9 @@
 import logging
+from datetime import datetime
+
 from pydantic import BaseSettings, Field, ValidationError, validator, root_validator
+from pydantic.datetime_parse import parse_datetime
+from pydantic.errors import DateTimeError
 
 
 logging.basicConfig(
@@ -12,8 +16,8 @@ class Settings(BaseSettings):
     wordpress_address: str
     wordpress_login: str
     wordpress_password: str
-    year: int
-    month: int
+    start_time: str
+    finish_time: str
     edit_posts: bool
     debug: bool = Field(default=False)
     yearmonth: str = None
@@ -22,17 +26,13 @@ class Settings(BaseSettings):
     def validate_wordpress_address(cls, v: str):
         return v.rstrip('/')
 
-    @validator('year')
-    def validate_year(cls, v: int):
-        if v >= 2030 or v <= 2010:
-            raise ValueError('Год должен быть между 2010 и 2030')
-        return v
-
-    @validator('month')
-    def validate_month(cls, v: int):
-        if v > 12 or v < 0:
-            raise ValueError('Месяц должен быть между 0 и 12')
-        return v
+    @validator('start_time', 'finish_time')
+    def validate_time(cls, v: str):
+        try:
+            parse_datetime(v)
+            return v
+        except DateTimeError:
+            raise ValueError('Проверьте формат времени. Пример формата: 2020-01-01T00:00:00+04:00')
 
     @root_validator
     def concat_year_month(cls, values):

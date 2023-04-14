@@ -1,18 +1,26 @@
-from dataclasses import dataclass,  field
-from urllib import parse
+from __future__ import annotations
+from dataclasses import dataclass
 
 
 @dataclass
 class Post:
-    id: int = field(init=False)
+    id: int
     title: str
-    edit_url: str
-    date_str: str
-    category: str
+    date: str
+    status: str
+    categories: list[int]
+    initial_content_raw: str
+    result_content_raw: str | None = None
 
-    def __post_init__(self) -> None:
-        self.id = int(
-            parse.parse_qs(parse.urlparse(self.edit_url).query)['post'][0]
+    @classmethod
+    def parse_json_post(cls, post_json: dict) -> Post:
+        return cls(
+            post_json.get("id"),
+            post_json.get("title").get("rendered"),
+            post_json.get("date"),
+            post_json.get("status"),
+            post_json.get("categories"),
+            post_json.get("content").get("raw"),
         )
 
 

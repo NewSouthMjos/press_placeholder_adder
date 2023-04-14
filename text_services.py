@@ -4,20 +4,20 @@ from models import Placeholder
 from bs4 import BeautifulSoup
 
 
-logger = logging.getLogger("text_service")
+logger = logging.getLogger("main")
 
 
 def get_syms_count_with_spaces(string: str) -> int:
     soup = BeautifulSoup(string, 'html.parser')
     text = soup.get_text().replace("\n", "")
-    logger.info(text)
+    # logger.error(text)
     return len(text)
 
 
 def get_syms_count_without_spaces(string: str) -> int:
     soup = BeautifulSoup(string, 'html.parser')
     text = soup.get_text().replace(" ", "").replace("\n", "")
-    logger.info(text)
+    # logger.error(text)
     return len(text)
 
 
@@ -44,6 +44,13 @@ def get_placeholders(path: str):
     return placeholders
 
 
+def find_key(num, my_dict):
+    for key in sorted(my_dict.keys()):
+        if key > num:
+            return key
+    return max(my_dict.keys())
+
+
 class PlaceholderHandler:
     def __init__(self) -> None:
         self._placeholders_loaded = False
@@ -56,8 +63,7 @@ class PlaceholderHandler:
     def select_placeholder(self, diff: int) -> Placeholder:
         if not self._placeholders_loaded:
             raise Exception('Call load_placeholders() first!')
-        # Временное решение: исправить
-        return self.placeholders[list(self.placeholders)[0]]
+        return self.placeholders[find_key(diff, self.placeholders)]
 
 
 # def get_raw_post_content(post_json: dict) -> str:
@@ -67,7 +73,8 @@ class PlaceholderHandler:
 def add_placeholder_to_raw_content() -> str:
     pass
 
+
 # tests
 if __name__ == "__main__":
     placeholders = get_placeholders('./placeholders')
-    print([placeholder.symbols_count for placeholder in placeholders])
+    print([placeholder.symbols_count for placeholder in placeholders.values()])

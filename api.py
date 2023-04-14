@@ -4,47 +4,49 @@ import requests
 
 from settings import Settings
 
-logger = logging.getLogger("api")
+logger = logging.getLogger("main")
 
 
-# TODO: исправить. Не рабочая функция
 def get_posts(session: requests.Session, settings: Settings):
     # Send a GET request to the posts page to get the list of posts
     base_url = f'{settings.wordpress_address}/wp-json/wp/v2/posts'
 
     # set the date range for the month
-    after = f'2020-01-01T00:00:00+04:00'
-    before = f'2020-01-31T00:00:00+04:00'
+    after = settings.start_time
+    before = settings.finish_time
 
     # set the query parameters for the API request
+    per_page = 100
     params = {
         'after': after,
         'before': before,
-        'per_page': 1,  # limit the number of posts per page to 100
+        'per_page': per_page,
         'context': 'edit',
-        '_locale': 'user'
+        '_locale': 'user',
+        'categories_exclude': [11477, 422],
+        'order': 'asc',
     }
 
     all_posts = []
-    page = 1
+    offset = 0
 
     # make requests until all posts for the month have been retrieved
-    # while True:
-    response = session.get(base_url, params=params)
-    logger.error(response.text)
-    response.raise_for_status()
-    posts = response.json()
+    while True:
+        response = session.get(base_url, params=params)
+        response.raise_for_status()
+        posts = response.json()
 
-    # if not posts:  # no more posts left to retrieve
-    #     break
+        if not posts:  # no more posts left to retrieve
+            break
 
-    all_posts.extend(posts)
+        all_posts.extend(posts)
+        logger.info(f'{len(all_posts)}...')
 
-    # increment the page number to retrieve the next batch of posts
-    page += 1
+        # increment the page number to retrieve the next batch of posts
+        offset += per_page
 
-    # update the query parameters with the page number for the next request
-    params['page'] = page
+        # update the query parameters with the page number for the next request
+        params['offset'] = offset
 
     return all_posts
 
@@ -63,7 +65,7 @@ def get_post(session: requests.Session, settings: Settings, id: int):
 
 
 def update_post(session: requests.Session, settings: Settings, id: int, content: str):
-    base_url = f'{settings.wordpress_address}/wp-json/wp/v2/posts/{post.id}'
-
-    response = session.post(base_url, params=params)
-
+    base_url = f'{settings.wordpress_address}/wp-json/wp/v2/posts/{id}'
+    body = {'content': content}
+    response = session.post(base_url, data=body)
+    logger.info(response.status_code)
