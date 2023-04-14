@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     wordpress_password: str
     year: int
     month: int
+    edit_posts: bool
     debug: bool = Field(default=False)
     yearmonth: str = None
 
