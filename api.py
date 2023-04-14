@@ -23,7 +23,6 @@ def get_posts(session: requests.Session, settings: Settings):
         'per_page': per_page,
         'context': 'edit',
         '_locale': 'user',
-        'categories_exclude': [11477, 422],
         'order': 'asc',
     }
 
@@ -69,3 +68,5 @@ def update_post(session: requests.Session, settings: Settings, id: int, content:
     body = {'content': content}
     response = session.post(base_url, data=body)
     logger.info(response.status_code)
+    if not response.ok:
+        raise Exception(f'Ответ сервера был: {response.status_code}')

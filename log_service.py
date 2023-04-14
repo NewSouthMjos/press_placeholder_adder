@@ -5,6 +5,7 @@ from pathlib import Path
 TITLE_ROW = [
     "ID статьи",
     "Была обработана",
+    "Подлежит обработке",
     "Заголовок",
     "Ссылка",
     "Дата и время",
@@ -21,6 +22,7 @@ class ResultLogRow:
         self,
         post_id: int,
         was_edited: str,
+        should_be_edited: str,
         title: str,
         link: str,
         datetime: str,
@@ -32,6 +34,7 @@ class ResultLogRow:
     ) -> None:
         self.post_id = post_id
         self.was_edited = was_edited
+        self.should_be_edited = should_be_edited
         self.title = title
         self.link = link
         self.datetime = datetime
@@ -46,6 +49,7 @@ class ResultLogRow:
     def __iter__(self):
         yield self.post_id
         yield self.was_edited
+        yield self.should_be_edited
         yield self.title
         yield self.link
         yield self.datetime
@@ -104,6 +108,7 @@ class LogHandler:
 if __name__ == "__main__":
     a = ResultLogRow(
         1323,
+        "да",
         "да",
         "В Самаре завершился лыжный марафон «Сокольи горы»",
         "sdsds",

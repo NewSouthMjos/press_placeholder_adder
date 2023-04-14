@@ -57,42 +57,46 @@ def process_single_post(
     post_json: dict,
 ):
     post = Post.parse_json_post(post_json)
-    edited_post, result_row = prepare_post(settings, post, placeholder_handler)
+    result_row = prepare_result_log_row(settings, post)
 
     # Проверка: статья уже была обновлена, это записано в логах
-    if edited_post.id in log_handler.already_edited_posts_ids:
+    if post.id in log_handler.already_edited_posts_ids:
         logger.info(
-            f"Статья id: {edited_post.id} уже была изменена (признак: это записано в log)"
+            f"Статья id: {post.id} уже была изменена (признак: есть запись в log)"
         )
+        result_row.should_be_edited = "нет (уже была изменена - есть запись в log)"
+        log_handler.add_log_row(result_row)
         return
 
     # Проверка: статья уже была обновлена, по наличию обновки в статье
-    if "Страничка истории" in edited_post.initial_content_raw:
+    if "Страничка истории" in post.initial_content_raw:
         logger.info(
-            f"Статья id: {edited_post.id} уже была изменена (признак: наличине Страничка истории в тексте)"
+            f"Статья id: {post.id} уже была изменена (признак: наличие Страничка истории в тексте)"
         )
-        result_row.was_edited = "нет"
+        result_row.should_be_edited = "нет (уже была изменена - Страничка истории в тексте)"
         log_handler.add_log_row(result_row)
         return
 
     # Доппроверка: статья - официальное опубликование - категории 11477 и 422
-    if (11477 in edited_post.categories) or (422 in edited_post.categories):
+    if (11477 in post.categories) or (422 in post.categories):
         logger.info(
-            f"Статья id: {edited_post.id} является официальным публикованием. Пропускаю"
+            f"Статья id: {post.id} является официальным публикованием. Пропускаю"
         )
-        result_row.was_edited = "нет"
+        result_row.should_be_edited = "нет (официальное публикование)"
         log_handler.add_log_row(result_row)
         return
 
     # Статья слишком коротка
     if result_row.initial_syms_count_with_spaces <= 800:
         logger.info(
-            f"Статья id: {edited_post.id} слишком короткая (кол-во символов: {result_row.initial_syms_count_with_spaces}). Пропускаю"
+            f"Статья id: {post.id} слишком короткая (кол-во символов: {result_row.initial_syms_count_with_spaces}). Пропускаю"
         )
-        result_row.was_edited = "нет"
+        result_row.should_be_edited = "нет (слишком короткая)"
         log_handler.add_log_row(result_row)
         return
 
+    # Все проверки пройдены: статья должна быть изменена
+    edited_post, result_row = prepare_post(settings, post, placeholder_handler, result_row)
     if not settings.edit_posts:
         log_handler.add_log_row(result_row)
         logger.info(f"Статья id: {edited_post.id} добавлена в лог")
@@ -111,22 +115,41 @@ def process_single_post(
     log_handler.add_log_row(result_row)
 
 
+def prepare_result_log_row(
+    settings: Settings,
+    post: Post,
+) -> ResultLogRow:
+    initial_syms_count_with_spaces = text_services.get_syms_count_with_spaces(
+        post.initial_content_raw
+    )
+    return ResultLogRow(
+        post.id,
+        "нет",
+        "нет",
+        post.title,
+        f"{settings.wordpress_address}/news/{post.id}",
+        post.date,
+        initial_syms_count_with_spaces,
+        0,
+        0,
+        0,
+        0,
+    )
+
+
 def prepare_post(
     settings: Settings,
     post: Post,
     placeholder_handler: text_services.PlaceholderHandler,
+    result_log_row: ResultLogRow,
 ) -> tuple[Post, ResultLogRow]:
-    initial_syms_count_with_spaces = text_services.get_syms_count_with_spaces(
-        post.initial_content_raw
-    )
     initial_syms_count_without_spaces = (
         text_services.get_syms_count_without_spaces(post.initial_content_raw)
         + text_services.get_syms_count_without_spaces(post.title)
     )
-    diff = initial_syms_count_with_spaces - initial_syms_count_without_spaces
-    placeholder = placeholder_handler.select_placeholder(diff)
+    diff = result_log_row.initial_syms_count_with_spaces - initial_syms_count_without_spaces
 
-    # Изменение post
+    placeholder = placeholder_handler.select_placeholder(diff)
     post.result_content_raw = "\n".join(
         (post.initial_content_raw, placeholder.text)
     )
@@ -134,18 +157,11 @@ def prepare_post(
         post.result_content_raw
     ) + text_services.get_syms_count_without_spaces(post.title)
 
-    result_log_row = ResultLogRow(
-        post.id,
-        "нет",
-        post.title,
-        f"https://sgpress.ru/news/{post.id}",
-        post.date,
-        initial_syms_count_with_spaces,
-        initial_syms_count_without_spaces,
-        diff,
-        placeholder.symbols_count,
-        finish_syms_count,
-    )
+    result_log_row.should_be_edited = 'да'
+    result_log_row.initial_syms_count_without_spaces = initial_syms_count_without_spaces
+    result_log_row.diff = diff
+    result_log_row.added_syms_count = placeholder.symbols_count
+    result_log_row.finish_syms_count = finish_syms_count
     return post, result_log_row
 
 
