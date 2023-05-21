@@ -60,6 +60,7 @@ def process_single_post(
 ):
     post = Post.parse_json_post(post_json)
     result_row = prepare_result_log_row(settings, post)
+    edited_post, result_row = prepare_post(settings, post, placeholder_handler, result_row)
 
     # Проверка: статья уже была обновлена, это записано в логах
     if post.id in log_handler.already_edited_posts_ids:
@@ -98,7 +99,6 @@ def process_single_post(
         return
 
     # Все проверки пройдены: статья должна быть изменена
-    edited_post, result_row = prepare_post(settings, post, placeholder_handler, result_row)
     if not settings.edit_posts:
         log_handler.add_log_row(result_row)
         logger.info(f"Статья id: {edited_post.id} добавлена в лог")
